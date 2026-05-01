@@ -51,21 +51,31 @@ def is_instagram(url: str) -> bool:
 
 async def download_instagram(url: str) -> str:
     headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
     }
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            'https://api.cobalt.tools/',
-            json={'url': url},
+            'https://igram.world/api/convert',
+            data={'url': url},
             headers=headers,
         ) as resp:
-            data = await resp.json()
+            data = await resp.json(content_type=None)
 
-    video_url = data.get('url')
+    # Response is a list of media items or a dict with url
+    video_url = None
+    if isinstance(data, list):
+        for item in data:
+            if item.get('type') == 'mp4' or '.mp4' in item.get('url', ''):
+                video_url = item.get('url')
+                break
+        if not video_url and data:
+            video_url = data[0].get('url')
+    elif isinstance(data, dict):
+        video_url = data.get('url')
+
     if not video_url:
-        raise Exception(f"cobalt.tools не вернул ссылку: {data}")
+        raise Exception(f"igram.world не вернул ссылку: {data}")
 
     filename = 'instagram.mp4'
     async with aiohttp.ClientSession() as session:
