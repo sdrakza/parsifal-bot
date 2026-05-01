@@ -51,26 +51,23 @@ def is_instagram(url: str) -> bool:
 
 async def download_instagram(url: str) -> str:
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Origin': 'https://snapinsta.app',
-        'Referer': 'https://snapinsta.app/',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
     }
-    data = {'url': url, 'q': '1'}
 
     async with aiohttp.ClientSession() as session:
-        async with session.post('https://snapinsta.app/api/ajaxSearch', data=data, headers=headers) as resp:
-            html = await resp.text()
+        async with session.post(
+            'https://api.cobalt.tools/api/json',
+            json={'url': url},
+            headers=headers,
+        ) as resp:
+            data = await resp.json()
 
-    video_urls = re.findall(r'href="(https://[^"]+\.mp4[^"]*)"', html)
-    if not video_urls:
-        video_urls = re.findall(r'"(https://[^"]+\.mp4[^"]*)"', html)
-    if not video_urls:
-        raise Exception("Не удалось найти видео на странице snapinsta")
+    video_url = data.get('url')
+    if not video_url:
+        raise Exception(f"cobalt.tools не вернул ссылку: {data}")
 
-    video_url = video_urls[0]
     filename = 'instagram.mp4'
-
     async with aiohttp.ClientSession() as session:
         async with session.get(video_url) as resp:
             with open(filename, 'wb') as f:
