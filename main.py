@@ -41,7 +41,7 @@ def is_tiktok(url: str) -> bool:
     return 'tiktok.com' in url or 'vm.tiktok.com' in url or 'vt.tiktok.com' in url
 
 
-async def download_tiktok(url: str) -> str:
+async def download_tiktok(url: str) -> dict:
     api_url = f"https://www.tikwm.com/api/?url={url}"
     async with aiohttp.ClientSession() as session:
         async with session.get(api_url) as resp:
@@ -50,15 +50,28 @@ async def download_tiktok(url: str) -> str:
     if data.get('code') != 0:
         raise Exception(f"tikwm API error: {data.get('msg')}")
 
-    video_url = data['data']['play']
+    info = data['data']
 
+    # Photo carousel
+    if info.get('images'):
+        image_urls = info['images']
+        filenames = []
+        async with aiohttp.ClientSession() as session:
+            for i, img_url in enumerate(image_urls):
+                async with session.get(img_url) as resp:
+                    filename = f'photo_{i}.jpg'
+                    with open(filename, 'wb') as f:
+                        f.write(await resp.read())
+                    filenames.append(filename)
+        return {'type': 'photos', 'files': filenames}
+
+    # Video
     async with aiohttp.ClientSession() as session:
-        async with session.get(video_url) as resp:
+        async with session.get(info['play']) as resp:
             filename = 'video.mp4'
             with open(filename, 'wb') as f:
                 f.write(await resp.read())
-
-    return filename
+    return {'type': 'video', 'file': filename}
 
 
 async def download_ytdlp(url: str) -> str:
@@ -70,20 +83,48 @@ async def download_ytdlp(url: str) -> str:
 
 async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = None, business_connection_id: str = None):
     if is_tiktok(url):
-        filename = await download_tiktok(url)
+        result = await download_tiktok(url)
+
+        if result['type'] == 'photos':
+            files = result['files']
+            try:
+                media = [
+                    types.InputMediaPhoto(media=FSInputFile(f))
+                    for f in files
+                ]
+                await bot.send_media_group(
+                    chat_id=chat_id,
+                    media=media,
+                    business_connection_id=business_connection_id,
+                )
+            finally:
+                for f in files:
+                    if os.path.exists(f):
+                        os.remove(f)
+        else:
+            filename = result['file']
+            try:
+                await bot.send_video(
+                    chat_id=chat_id,
+                    video=FSInputFile(filename),
+                    reply_to_message_id=reply_to_message_id,
+                    business_connection_id=business_connection_id,
+                )
+            finally:
+                if os.path.exists(filename):
+                    os.remove(filename)
     else:
         filename = await download_ytdlp(url)
-
-    try:
-        await bot.send_video(
-            chat_id=chat_id,
-            video=FSInputFile(filename),
-            reply_to_message_id=reply_to_message_id,
-            business_connection_id=business_connection_id,
-        )
-    finally:
-        if os.path.exists(filename):
-            os.remove(filename)
+        try:
+            await bot.send_video(
+                chat_id=chat_id,
+                video=FSInputFile(filename),
+                reply_to_message_id=reply_to_message_id,
+                business_connection_id=business_connection_id,
+            )
+        finally:
+            if os.path.exists(filename):
+                os.remove(filename)
 
 
 @dp.message(F.text.contains("http"))
