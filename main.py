@@ -12,13 +12,8 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 YDL_OPTS = {
-    'format': 'bestvideo+bestaudio/best',
+    'format': 'best[ext=mp4]/best',
     'outtmpl': 'video.%(ext)s',
-    'merge_output_format': 'mp4',
-    'postprocessors': [{
-        'key': 'FFmpegVideoConvertor',
-        'preferedformat': 'mp4',
-    }],
     'http_headers': {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     },
@@ -32,7 +27,6 @@ async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = N
     with yt_dlp.YoutubeDL(YDL_OPTS) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info)
-        filename = os.path.splitext(filename)[0] + '.mp4'
 
     try:
         await bot.send_video(
