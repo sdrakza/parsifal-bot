@@ -1,8 +1,6 @@
 import asyncio
 import aiohttp
 import re
-import glob
-import instaloader
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import FSInputFile
@@ -51,35 +49,34 @@ def is_instagram(url: str) -> bool:
     return 'instagram.com' in url
 
 
-def _download_instagram_sync(url: str) -> str:
-    shortcode = re.search(r'/(?:p|reel|tv)/([A-Za-z0-9_-]+)', url)
-    if not shortcode:
-        raise Exception("Не удалось извлечь shortcode из Instagram URL")
-    shortcode = shortcode.group(1)
-
-    L = instaloader.Instaloader(
-        download_videos=True,
-        download_video_thumbnails=False,
-        download_geotags=False,
-        download_comments=False,
-        save_metadata=False,
-        post_metadata_txt_pattern='',
-        filename_pattern='{shortcode}',
-    )
-
-    post = instaloader.Post.from_shortcode(L.context, shortcode)
-    L.download_post(post, target='.')
-
-    files = glob.glob(f'{shortcode}*.mp4')
-    if not files:
-        raise Exception("Видео не найдено после скачивания")
-
-    return files[0]
-
-
 async def download_instagram(url: str) -> str:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _download_instagram_sync, url)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Origin': 'https://snapinsta.app',
+        'Referer': 'https://snapinsta.app/',
+    }
+    data = {'url': url, 'q': '1'}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post('https://snapinsta.app/api/ajaxSearch', data=data, headers=headers) as resp:
+            html = await resp.text()
+
+    video_urls = re.findall(r'href="(https://[^"]+\.mp4[^"]*)"', html)
+    if not video_urls:
+        video_urls = re.findall(r'"(https://[^"]+\.mp4[^"]*)"', html)
+    if not video_urls:
+        raise Exception("Не удалось найти видео на странице snapinsta")
+
+    video_url = video_urls[0]
+    filename = 'instagram.mp4'
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(video_url) as resp:
+            with open(filename, 'wb') as f:
+                f.write(await resp.read())
+
+    return filename
 
 
 async def download_tiktok(url: str) -> str:
