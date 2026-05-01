@@ -1,8 +1,6 @@
 import asyncio
 import aiohttp
-import re
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command
 from aiogram.types import FSInputFile
 from aiogram.enums import UpdateType
 import yt_dlp
@@ -29,61 +27,18 @@ async def notify_owner(message: types.Message, url: str):
     except Exception:
         pass
 
+
 YDL_OPTS = {
     'format': 'best[ext=mp4]/best',
     'outtmpl': 'video.%(ext)s',
     'http_headers': {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     },
-    'extractor_args': {
-        'instagram': {'include_ads': False},
-    },
 }
 
 
 def is_tiktok(url: str) -> bool:
     return 'tiktok.com' in url or 'vm.tiktok.com' in url or 'vt.tiktok.com' in url
-
-
-def is_instagram(url: str) -> bool:
-    return 'instagram.com' in url
-
-
-async def download_instagram(url: str) -> str:
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-    }
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            'https://igram.world/api/convert',
-            data={'url': url},
-            headers=headers,
-        ) as resp:
-            data = await resp.json(content_type=None)
-
-    # Response is a list of media items or a dict with url
-    video_url = None
-    if isinstance(data, list):
-        for item in data:
-            if item.get('type') == 'mp4' or '.mp4' in item.get('url', ''):
-                video_url = item.get('url')
-                break
-        if not video_url and data:
-            video_url = data[0].get('url')
-    elif isinstance(data, dict):
-        video_url = data.get('url')
-
-    if not video_url:
-        raise Exception(f"igram.world не вернул ссылку: {data}")
-
-    filename = 'instagram.mp4'
-    async with aiohttp.ClientSession() as session:
-        async with session.get(video_url) as resp:
-            with open(filename, 'wb') as f:
-                f.write(await resp.read())
-
-    return filename
 
 
 async def download_tiktok(url: str) -> str:
@@ -116,8 +71,6 @@ async def download_ytdlp(url: str) -> str:
 async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = None, business_connection_id: str = None):
     if is_tiktok(url):
         filename = await download_tiktok(url)
-    elif is_instagram(url):
-        filename = await download_instagram(url)
     else:
         filename = await download_ytdlp(url)
 
