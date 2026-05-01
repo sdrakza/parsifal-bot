@@ -36,6 +36,12 @@ YDL_OPTS = {
         'key': 'FFmpegVideoConvertor',
         'preferedformat': 'mp4',
     }],
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    },
+    'extractor_args': {
+        'instagram': {'include_ads': False},
+    },
 }
 
 
@@ -61,7 +67,6 @@ async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = N
 async def handle_message(message: types.Message):
     url = message.text.strip()
     await notify_owner(message, url)
-    await message.reply("Скачиваю видео...")
     try:
         await download_and_send(
             url=url,
