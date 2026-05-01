@@ -88,15 +88,12 @@ async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = N
         if result['type'] == 'photos':
             files = result['files']
             try:
-                media = [
-                    types.InputMediaPhoto(media=FSInputFile(f))
-                    for f in files
-                ]
-                await bot.send_media_group(
-                    chat_id=chat_id,
-                    media=media,
-                    business_connection_id=business_connection_id,
-                )
+                for f in files:
+                    await bot.send_photo(
+                        chat_id=chat_id,
+                        photo=FSInputFile(f),
+                        business_connection_id=business_connection_id,
+                    )
             finally:
                 for f in files:
                     if os.path.exists(f):
