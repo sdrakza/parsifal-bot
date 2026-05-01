@@ -54,7 +54,7 @@ async def download_tiktok(url: str) -> dict:
 
     # Photo carousel
     if info.get('images'):
-        image_urls = info['images']
+        image_urls = info['images'][:10]
         filenames = []
         async with aiohttp.ClientSession() as session:
             for i, img_url in enumerate(image_urls):
