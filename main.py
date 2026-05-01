@@ -57,7 +57,7 @@ async def download_instagram(url: str) -> str:
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            'https://api.cobalt.tools/api/json',
+            'https://api.cobalt.tools/',
             json={'url': url},
             headers=headers,
         ) as resp:
