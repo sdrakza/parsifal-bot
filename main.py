@@ -1,5 +1,8 @@
 import asyncio
 import aiohttp
+import re
+import glob
+import instaloader
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import FSInputFile
@@ -44,6 +47,41 @@ def is_tiktok(url: str) -> bool:
     return 'tiktok.com' in url or 'vm.tiktok.com' in url or 'vt.tiktok.com' in url
 
 
+def is_instagram(url: str) -> bool:
+    return 'instagram.com' in url
+
+
+def _download_instagram_sync(url: str) -> str:
+    shortcode = re.search(r'/(?:p|reel|tv)/([A-Za-z0-9_-]+)', url)
+    if not shortcode:
+        raise Exception("Не удалось извлечь shortcode из Instagram URL")
+    shortcode = shortcode.group(1)
+
+    L = instaloader.Instaloader(
+        download_videos=True,
+        download_video_thumbnails=False,
+        download_geotags=False,
+        download_comments=False,
+        save_metadata=False,
+        post_metadata_txt_pattern='',
+        filename_pattern='{shortcode}',
+    )
+
+    post = instaloader.Post.from_shortcode(L.context, shortcode)
+    L.download_post(post, target='.')
+
+    files = glob.glob(f'{shortcode}*.mp4')
+    if not files:
+        raise Exception("Видео не найдено после скачивания")
+
+    return files[0]
+
+
+async def download_instagram(url: str) -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _download_instagram_sync, url)
+
+
 async def download_tiktok(url: str) -> str:
     api_url = f"https://www.tikwm.com/api/?url={url}"
     async with aiohttp.ClientSession() as session:
@@ -74,6 +112,8 @@ async def download_ytdlp(url: str) -> str:
 async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = None, business_connection_id: str = None):
     if is_tiktok(url):
         filename = await download_tiktok(url)
+    elif is_instagram(url):
+        filename = await download_instagram(url)
     else:
         filename = await download_ytdlp(url)
 
