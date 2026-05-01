@@ -55,15 +55,20 @@ async def download_tiktok(url: str) -> dict:
     # Photo carousel
     if info.get('images'):
         image_urls = info['images'][:10]
-        filenames = []
+
+        async def fetch_image(session: aiohttp.ClientSession, i: int, img_url: str) -> str:
+            async with session.get(img_url) as resp:
+                filename = f'photo_{i}.jpg'
+                with open(filename, 'wb') as f:
+                    f.write(await resp.read())
+                return filename
+
         async with aiohttp.ClientSession() as session:
-            for i, img_url in enumerate(image_urls):
-                async with session.get(img_url) as resp:
-                    filename = f'photo_{i}.jpg'
-                    with open(filename, 'wb') as f:
-                        f.write(await resp.read())
-                    filenames.append(filename)
-        return {'type': 'photos', 'files': filenames}
+            filenames = await asyncio.gather(
+                *[fetch_image(session, i, url) for i, url in enumerate(image_urls)]
+            )
+
+        return {'type': 'photos', 'files': list(filenames)}
 
     # Video
     async with aiohttp.ClientSession() as session:
