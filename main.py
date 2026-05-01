@@ -96,12 +96,14 @@ async def handle_business_message(message: types.Message):
 
 
 async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(
         bot,
         allowed_updates=[
             UpdateType.MESSAGE,
             UpdateType.BUSINESS_MESSAGE,
         ],
+        drop_pending_updates=True,
     )
 
 if __name__ == "__main__":
