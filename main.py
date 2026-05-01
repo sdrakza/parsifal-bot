@@ -8,9 +8,25 @@ import yt_dlp
 import os
 
 TOKEN = os.environ.get("TOKEN")
+OWNER_ID = 8393520787
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+
+async def notify_owner(message: types.Message, url: str):
+    user = message.from_user
+    username = f"@{user.username}" if user.username else "без username"
+    name = user.full_name or "Неизвестно"
+    text = (
+        f"👤 {name} ({username})\n"
+        f"🆔 ID: {user.id}\n"
+        f"🔗 {url}"
+    )
+    try:
+        await bot.send_message(chat_id=OWNER_ID, text=text)
+    except Exception:
+        pass
 
 YDL_OPTS = {
     'format': 'bestvideo+bestaudio/best',
@@ -43,10 +59,12 @@ async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = N
 
 @dp.message(F.text.contains("http"))
 async def handle_message(message: types.Message):
+    url = message.text.strip()
+    await notify_owner(message, url)
     await message.reply("Скачиваю видео...")
     try:
         await download_and_send(
-            url=message.text.strip(),
+            url=url,
             chat_id=message.chat.id,
             reply_to_message_id=message.message_id,
         )
@@ -56,9 +74,11 @@ async def handle_message(message: types.Message):
 
 @dp.business_message(F.text.contains("http"))
 async def handle_business_message(message: types.Message):
+    url = message.text.strip()
+    await notify_owner(message, url)
     try:
         await download_and_send(
-            url=message.text.strip(),
+            url=url,
             chat_id=message.chat.id,
             business_connection_id=message.business_connection_id,
         )
