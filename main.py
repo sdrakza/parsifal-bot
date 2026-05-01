@@ -15,16 +15,8 @@ dp = Dispatcher()
 
 
 async def notify_owner(message: types.Message, url: str):
-    user = message.from_user
-    username = f"@{user.username}" if user.username else "без username"
-    name = user.full_name or "Неизвестно"
-    text = (
-        f"👤 {name} ({username})\n"
-        f"🆔 ID: {user.id}\n"
-        f"🔗 {url}"
-    )
     try:
-        await bot.send_message(chat_id=OWNER_ID, text=text)
+        await bot.send_message(chat_id=OWNER_ID, text=f"🔗 {url}")
     except Exception:
         pass
 
