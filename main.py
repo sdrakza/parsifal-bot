@@ -8,17 +8,8 @@ import yt_dlp
 import os
 
 TOKEN = os.environ.get("TOKEN")
-OWNER_ID = 8393520787
-
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
-
-
-async def notify_owner(message: types.Message, url: str):
-    try:
-        await bot.send_message(chat_id=OWNER_ID, text=f"🔗 {url}")
-    except Exception:
-        pass
 
 YDL_OPTS = {
     'format': 'bestvideo+bestaudio/best',
@@ -58,7 +49,6 @@ async def download_and_send(url: str, chat_id: int, reply_to_message_id: int = N
 @dp.message(F.text.contains("http"))
 async def handle_message(message: types.Message):
     url = message.text.strip()
-    await notify_owner(message, url)
     try:
         await download_and_send(
             url=url,
@@ -72,7 +62,6 @@ async def handle_message(message: types.Message):
 @dp.business_message(F.text.contains("http"))
 async def handle_business_message(message: types.Message):
     url = message.text.strip()
-    await notify_owner(message, url)
     try:
         await download_and_send(
             url=url,
